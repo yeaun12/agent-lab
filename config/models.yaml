@@ -1,0 +1,26 @@
+# 모델 별칭 설정. 키 값이 아니라 '키가 들어 있는 환경 변수 이름'만 적는다 → GitHub에 올려도 안전하다.
+# 순서와 선택 근거는 docs/providers.md(0.4 결론)를 따른다.
+
+smart: # 어려운 추론
+  provider: groq
+  base_url: https://api.groq.com/openai/v1
+  model: openai/gpt-oss-120b
+  api_key_env: GROQ_API_KEY
+
+fast: # 빠른 일반 작업
+  provider: groq
+  base_url: https://api.groq.com/openai/v1
+  model: openai/gpt-oss-20b
+  api_key_env: GROQ_API_KEY
+
+long: # 긴 자료 (컨텍스트 100만 토큰)
+  provider: gemini
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai
+  model: gemini-3.5-flash-lite
+  api_key_env: GEMINI_API_KEY
+
+local: # 내 PC의 Ollama (키 없음, 무료 한도 없음)
+  provider: ollama
+  base_url: http://localhost:11434/v1
+  model: llama3.2:3b
+  api_key_env: null

@@ -1,6 +1,8 @@
 import asyncio
 import time
+
 import httpx  # HTTP 요청 도구. 0.5에서 설치했다
+
 
 def sync_version():
     start = time.perf_counter()
@@ -18,12 +20,14 @@ async def async_version():
     await asyncio.gather(*(one() for _ in range(10)))
     print(f"비동기: {time.perf_counter() - start:.1f}초")
 
+
 async def work(n, fail=False):
     await asyncio.sleep(n)
     if fail:
         raise ValueError(f"작업 {n} 실패")
     print(f"작업 {n} 완료")
     return n
+
 
 async def exp_gather():
     try:
@@ -33,8 +37,11 @@ async def exp_gather():
         print("gather 기본 → 예외가 바로 올라옴:", e)
     await asyncio.sleep(2)
 
+
 async def exp_gather_safe():
-    results = await asyncio.gather(work(1), work(2, fail=True), work(3), return_exceptions=True)
+    results = await asyncio.gather(
+        work(1), work(2, fail=True), work(3), return_exceptions=True
+    )
     for r in results:
         print("실패" if isinstance(r, Exception) else "성공", r)
 
@@ -88,7 +95,12 @@ async def fetch_one(client, sem, url):
             # 요청을 보내고 응답을 기다린다. 기다리는 동안 다른 URL 요청이 진행된다
             r = await client.get(url)
             # 성공: 상태 코드를 기록한다 (500도 '응답은 왔음'이라 여기로 온다)
-            result = {"url": url, "status": r.status_code, "bytes": len(r.content), "ok": r.status_code < 400}
+            result = {
+                "url": url,
+                "status": r.status_code,
+                "bytes": len(r.content),
+                "ok": r.status_code < 400,
+            }
         except httpx.TimeoutException:
             # 정해 둔 시간(timeout) 안에 응답이 안 오면 여기로 온다
             result = {"url": url, "error": "시간 초과"}

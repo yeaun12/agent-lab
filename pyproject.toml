@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.14.2",
     "pydantic-settings>=2.16.2",
     "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
     "uvicorn>=0.54.0",
 ]
 
@@ -33,4 +34,4 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-
+markers = ["live: 실제 API를 부르는 테스트 (무료 한도를 쓴다)"]
