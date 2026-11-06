@@ -1,0 +1,182 @@
+[
+  {
+    "id": "q01",
+    "question": "연결 재시도(retries)는 어디서 설정하나?",
+    "expected_files": [
+      "httpx/_transports/default.py"
+    ],
+    "answer": "연결 재시도(retries)는 HTTPX의 기본 클라이언트 설정에 포함되어 있지 않으며, 현재 저장소 코드에서 재시도를 직접 설정하는 옵션은 찾지 못했습니다. 따라서 재시도 설정은 외부 패키지(`httpx-retries`) 등을 통해 제공되는 것이 일반적입니다.  \n\n찾지 못함.",
+    "cited": [],
+    "file_match": false,
+    "grounded": null,
+    "steps": 8,
+    "calls": 9,
+    "tokens": 19085,
+    "stopped": "max_steps",
+    "model": "fast"
+  },
+  {
+    "id": "q02",
+    "question": "기본 타임아웃은 몇 초이고 어디에 정의돼 있나?",
+    "expected_files": [
+      "httpx/_config.py"
+    ],
+    "answer": "기본 타임아웃은 5초이며, 이는 `httpx/_config.py` 모듈에서 `DEFAULT_TIMEOUT_CONFIG = Timeout(timeout=5.0)` 라고 정의되어 있습니다. 따라서 기본 타임아웃은 5초이고, 정의 위치는 `httpx/_config.py:246`입니다.",
+    "cited": [
+      "httpx/_config.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3146,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q04",
+    "question": "리다이렉트가 너무 많으면 어떤 예외가 나나?",
+    "expected_files": [
+      "httpx/_exceptions.py",
+      "httpx/_client.py"
+    ],
+    "answer": "리다이렉트가 너무 많이 발생하면 `httpx.TooManyRedirects` 예외가 발생합니다. 이는 `httpx/_exceptions.py` 에서 `TooManyRedirects` 클래스로 정의되어 있습니다. 경로: httpx/_exceptions.py:249-251",
+    "cited": [
+      "httpx/_exceptions.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3246,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q05",
+    "question": "raise_for_status는 어떤 상태 코드에서 예외를 던지나?",
+    "expected_files": [
+      "httpx/_models.py"
+    ],
+    "answer": "`Response.raise_for_status()`는 **2xx(200 ~ 299) 범위가 아닌** 모든 상태 코드에서 예외를 던집니다.  \n`self.is_success`가 `False`일 때(즉 1xx, 3xx, 4xx, 5xx) `HTTPStatusError`를 발생시키며, 3xx 응답이라도 리다이렉트 위치가 없으면 그대로 예외를 발생시킵니다.  \n근거: `httpx/_models.py:794-829` (is_success 검사와 예외 발생 코드).",
+    "cited": [
+      "httpx/_models.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 3,
+    "calls": 4,
+    "tokens": 6111,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q06",
+    "question": "Digest 인증은 어떻게 구현돼 있나?",
+    "expected_files": [
+      "httpx/_auth.py"
+    ],
+    "answer": "Digest 인증은 `httpx/_auth.py` 에 `DigestAuth` 클래스로 구현돼 있습니다.  \n1. 첫 요청에 대해 `auth_flow` 가 호출되면, 401 응답과 `WWW-Authenticate: Digest …` 헤더를 찾고 `_parse_challenge`(225‑250) 로 realm, nonce, algorithm, qop, opaque 등을 파싱해 `_last_challenge` 에 저장합니다.  \n2. 이후 요청을 다시 보내며 `_build_auth_header`(255‑302) 에서 `algorithm` 에 따라 `hashlib` 으로 HA1, HA2 를 계산하고, `qop`(auth or auth-int) 이 있으면 `nc`, `cnonce` 를 포함해 최종 `response` 값을 해시해 `Digest …` 헤더를 생성합니다.  \n3. `_ALGORITHM_TO_HASH_FUNCTION`(176‑184) 은 지원되는 알고리즘(MD5, SHA, SHA‑256, SHA‑512 등)↔`hashlib` 함수 매핑을 담당합니다.  \n4. `nonce_count` 와 `cnonce` 는 `_get_client_nonce`(304‑310) 으로 순차적으로 생성됩니다.  \n이와 같은 절차를 통해 HTTP Digest challenge‑response가 구현됩니다.  경로: httpx/_auth.py:225‑302, 176‑184, 304‑310.",
+    "cited": [
+      "httpx/_auth.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 5,
+    "calls": 6,
+    "tokens": 14180,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q07",
+    "question": "Basic 인증 헤더는 어떻게 만드나?",
+    "expected_files": [
+      "httpx/_auth.py"
+    ],
+    "answer": "HTTPX에서는 `BasicAuth` 클래스를 통해 기본 인증 헤더를 생성합니다.  \n`BasicAuth.__init__` 에서 `_build_auth_header` 를 호출해 `Authorization` 값을 미리 만들어 두고,  \n`auth_flow` 가 호출될 때 `request.headers[\"Authorization\"] = self._auth_header` 로 헤더를 삽입합니다.  \n`_build_auth_header` 은 `username` 과 `password` 를 `bytes` 로 변환해 `:` 으로 연결하고,  \nBase64 인코딩한 뒤 `f\"Basic {token}\"` 형식으로 문자열을 반환합니다.  \n\n참고: `httpx/_auth.py:139-142` (헤더 생성 로직), `httpx/_auth.py:135-137` (헤더 삽입).",
+    "cited": [
+      "httpx/_auth.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3888,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q09",
+    "question": "연결 풀의 기본 최대 연결 수는 얼마인가?",
+    "expected_files": [
+      "httpx/_config.py"
+    ],
+    "answer": "연결 풀의 기본 최대 연결 수는 **100**입니다.  \n`httpx/_config.py`에 정의된 기본 제한(`DEFAULT_LIMITS`)에서 `max_connections`가 100으로 설정돼 있습니다.  \n경로: httpx/_config.py:246-248",
+    "cited": [
+      "httpx/_config.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 3,
+    "calls": 4,
+    "tokens": 5803,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q10",
+    "question": "환경 변수에서 프록시 설정을 읽는 함수는 무엇인가?",
+    "expected_files": [
+      "httpx/_utils.py"
+    ],
+    "answer": "프록시 설정을 환경 변수에서 읽어들이는 함수는 `httpx/_utils.py`에 정의된 **`get_environment_proxies()`** 입니다. 이 함수는 `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` 같은 환경 변수를 읽어 proxy 매핑을 만들어 반환합니다.  \n\n경로: httpx/_utils.py:30-48\n",
+    "cited": [
+      "httpx/_utils.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 3,
+    "calls": 4,
+    "tokens": 6004,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q12",
+    "question": "테스트에서 실제 네트워크 없이 가짜 응답을 돌려주려면 무엇을 쓰나?",
+    "expected_files": [
+      "httpx/_transports/mock.py",
+      "docs/advanced/transports.md"
+    ],
+    "answer": "테스트에서 실제 네트워크를 사용하지 않고 미리 정의한 가짜 응답을 반환하려면 **`httpx.MockTransport`** 를 사용합니다. 이 클래스는 핸들러 함수를 받아서 요청에 대해 미리 정해진 응답을 반환하도록 해 주는 mock transport 입니다. 경로: httpx/_transports/mock.py:15‑17",
+    "cited": [
+      "httpx/_transports/mock.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 1,
+    "calls": 2,
+    "tokens": 1797,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q13",
+    "question": "WSGI 앱을 서버 없이 직접 호출하는 transport는 어디에 있나?",
+    "expected_files": [
+      "httpx/_transports/wsgi.py"
+    ],
+    "answer": "WSGI 앱을 서버 없이 직접 호출해 주는 전송 계층은 **`httpx/_transports/wsgi.py`**에 정의되어 있습니다.  \n해당 파일 안에 `class WSGITransport(BaseTransport):` 가 존재하며, `Client(app=app)`처럼 바로 사용하거나 `transport=WSGITransport(...)` 형태로 명시해 사용할 수 있습니다.  \n따라서 WSGI 앱을 직접 호출할 때는 이 파일을 참조하면 됩니다.  \n\n**근거**: httpx/_transports/wsgi.py:44-75",
+    "cited": [
+      "httpx/_transports/wsgi.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3738,
+    "stopped": "done",
+    "model": "fast"
+  }
+]

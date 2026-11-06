@@ -1,0 +1,186 @@
+[
+  {
+    "id": "q01",
+    "question": "연결 재시도(retries)는 어디서 설정하나?",
+    "expected_files": [
+      "httpx/_transports/default.py"
+    ],
+    "answer": "연결 재시도는 HTTPTransport 인스턴스를 만들 때 `retries` 매개변수로 지정합니다.  \n예를 들어 `transport = httpx.HTTPTransport(retries=3)`처럼 설정하면 그 Transport를 사용한 모든 클라이언트는 최대 3번까지 재시도를 수행합니다.  \nTransport를 직접 지정하지 않으면 기본 `httpx.Transport`가 사용되며, 이때도 같은 `retries` 인자를 전달할 수 있습니다.  \n\n- `httpx/_transports/default.py:147‑165` 에서 `retries` 파라미터가 정의되고 `httpcore.ConnectionPool`에 전달되는 것을 확인할 수 있습니다.  \n- `docs/advanced/transports.md`에서도 `HTTPTransport(retries=1)` 예시가 제공되어 재시도 설정을 설명하고 있습니다.",
+    "cited": [
+      "httpx/_transports/default.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 8,
+    "calls": 9,
+    "tokens": 18996,
+    "stopped": "max_steps",
+    "model": "fast"
+  },
+  {
+    "id": "q02",
+    "question": "기본 타임아웃은 몇 초이고 어디에 정의돼 있나?",
+    "expected_files": [
+      "httpx/_config.py"
+    ],
+    "answer": "기본 타임아웃은 **5 초**입니다. 이 값은 `httpx/_config.py` 모듈에 `DEFAULT_TIMEOUT_CONFIG = Timeout(timeout=5.0)` 로 정의되어 있으며, `Timeout` 클래스(선언부는 72‑85라인)에서 기본값으로 사용됩니다. 따라서 `Client` 를 새로 만들 때 타임아웃이 지정되지 않으면 이 5초가 자동으로 적용됩니다.  \n**근거**: httpx/_config.py:246‑248.",
+    "cited": [
+      "httpx/_config.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 8,
+    "calls": 9,
+    "tokens": 21951,
+    "stopped": "max_steps",
+    "model": "fast"
+  },
+  {
+    "id": "q04",
+    "question": "리다이렉트가 너무 많으면 어떤 예외가 나나?",
+    "expected_files": [
+      "httpx/_exceptions.py",
+      "httpx/_client.py"
+    ],
+    "answer": "리다이렉트가 너무 많으면 `httpx.TooManyRedirects` 예외가 발생합니다.  \n이 예외는 `httpx/_exceptions.py`에서 정의되어 있으며, 주석에 “Too many redirects”라는 설명이 적혀 있습니다(라인 249‑252).  \n테스트에서도 `client.get(..., follow_redirects=True)` 호출이 21번 리다이렉트 시도 시 `TooManyRedirects`를 기대하도록 되어 있습니다(테스트 파일 `tests/client/test_redirects.py`).  \n경로: `httpx/_exceptions.py:249‑252`.",
+    "cited": [
+      "httpx/_exceptions.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3741,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q05",
+    "question": "raise_for_status는 어떤 상태 코드에서 예외를 던지나?",
+    "expected_files": [
+      "httpx/_models.py"
+    ],
+    "answer": "`raise_for_status()`는 응답이 **2xx가 아니면** `HTTPStatusError`를 발생시킵니다.  \n구현은 `self.is_success`를 확인하고, `False`이면 바로 예외를 던지므로 1xx, 3xx, 4xx, 5xx 전 범위가 포함됩니다.  \n특히 `is_success`는 200 ≤ status ≤ 299(`httpx/_status_codes.py:52`)이고, `raise_for_status()` 내부에서 이 조건을 `if self.is_success: return`( `httpx/_models.py:805`)으로 검사합니다.  \n따라서 200‑299 코드는 예외를 내지 않으며, 그 외 모든 상태 코드는 예외를 던집니다.  (예: 301, 400, 404, 500 등)",
+    "cited": [
+      "httpx/_models.py",
+      "httpx/_status_codes.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 4,
+    "calls": 5,
+    "tokens": 9259,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q06",
+    "question": "Digest 인증은 어떻게 구현돼 있나?",
+    "expected_files": [
+      "httpx/_auth.py"
+    ],
+    "answer": "Digest 인증은 `httpx/_auth.py`의 `DigestAuth` 클래스에서 구현돼 있습니다.  \n초기화 시 사용자명·비밀번호를 바이트로 저장하고, `auth_flow` 메서드가 401 응답과 `WWW‑Authenticate: Digest` 헤더를 받아 `_parse_challenge`(httpx/_auth.py:224‑250)로 도전 과제(challenge)를 파싱합니다.  \n파싱된 realm, nonce, algorithm, qop 등을 기반으로 `_build_auth_header`(httpx/_auth.py:255‑298)에서 A1·A2 해시를 계산하고, `qop`에 따라 HA1·HA2·nonce·cnonce·nc 를 조합해 최종 Digest 헤더를 생성합니다.  \n`_get_client_nonce`(httpx/_auth.py:303‑309)로 클라이언트 고유 nonce를 만들고, `_resolve_qop`(httpx/_auth.py:329‑340)에서 지원되는 `qop` 값(`auth`)만 처리하도록 합니다.  \n이 모든 과정은 RFC 2617/7616에 따라 구현돼 있으며, 비밀번호는 해시 함수(`MD5`, `SHA`, 등)로 변환해 전송됩니다.",
+    "cited": [
+      "httpx/_auth.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 5,
+    "calls": 6,
+    "tokens": 14160,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q07",
+    "question": "Basic 인증 헤더는 어떻게 만드나?",
+    "expected_files": [
+      "httpx/_auth.py"
+    ],
+    "answer": "BasicAuth 클래스는 `username` 과 `password` 를 `:` 으로 연결한 바이트 문자열을 만든 뒤, `b64encode` 로 Base64 인코딩하고 다시 문자열로 디코드한 뒤 `Basic ` 접두어와 결합해 인증 헤더를 생성합니다. 이 과정은 `_build_auth_header` 메서드에서 구현되어 있습니다. 예를 들어 `\"user:pass\"` 를 인코딩하면 `\"dXNlcjpwYXNz\"` 가 되고, 최종 헤더는 `\"Basic dXNlcjpwYXNz\"` 가 됩니다.  \n경로: httpx/_auth.py:139-142",
+    "cited": [
+      "httpx/_auth.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 3801,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q09",
+    "question": "연결 풀의 기본 최대 연결 수는 얼마인가?",
+    "expected_files": [
+      "httpx/_config.py"
+    ],
+    "answer": "연결 풀의 기본 최대 연결 수는 **100개**입니다.  \n`DEFAULT_LIMITS = Limits(max_connections=100, max_keepalive_connections=20)` 가 `httpx/_config.py` 에 정의돼 있어 기본값이 100임을 확인할 수 있습니다. httpx/_config.py:246",
+    "cited": [
+      "httpx/_config.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 3,
+    "calls": 4,
+    "tokens": 6011,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q10",
+    "question": "환경 변수에서 프록시 설정을 읽는 함수는 무엇인가?",
+    "expected_files": [
+      "httpx/_utils.py"
+    ],
+    "answer": "프록시 설정을 환경 변수(`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` 등)에서 읽어오는 함수는 **`httpx._utils.get_environment_proxies`** 입니다. 이 함수는 `urllib.request.getproxies()` 를 호출해 환경 변수 값을 파싱하고, `http://`, `https://`, `all://` 형태의 딕셔너리를 반환합니다. 반환값은 프록시 URL과 `NO_PROXY` 로 지정된 호스트를 `None` 으로 매핑해 프록시 우회를 처리합니다. 경로: httpx/_utils.py:30-76",
+    "cited": [
+      "httpx/_utils.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 4458,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q12",
+    "question": "테스트에서 실제 네트워크 없이 가짜 응답을 돌려주려면 무엇을 쓰나?",
+    "expected_files": [
+      "httpx/_transports/mock.py",
+      "docs/advanced/transports.md"
+    ],
+    "answer": "테스트에서 실제 네트워크를 사용하지 않고 가짜 응답을 반환하려면 **`httpx.MockTransport`** 를 사용합니다.  \n`MockTransport` 은 `handler` 함수를 받아 `Request` 를 인자로 전달하고, 그 함수가 반환한 `Response` 객체를 그대로 사용합니다.  \n클라이언트에서 `transport=httpx.MockTransport(handler)` 로 지정하면 실제 HTTP 요청이 발생하지 않고 가짜 응답이 바로 반환됩니다.  \n근거: httpx/_transports/mock.py:15‑17, docs/advanced/transports.md:248‑257.",
+    "cited": [
+      "docs/advanced/transports.md",
+      "httpx/_transports/mock.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 3,
+    "calls": 4,
+    "tokens": 5611,
+    "stopped": "done",
+    "model": "fast"
+  },
+  {
+    "id": "q13",
+    "question": "WSGI 앱을 서버 없이 직접 호출하는 transport는 어디에 있나?",
+    "expected_files": [
+      "httpx/_transports/wsgi.py"
+    ],
+    "answer": "WSGI 앱을 서버 없이 바로 호출해 주는 transport는 **`httpx/_transports/wsgi.py`**에 정의된 `WSGITransport` 클래스입니다.  \n클래스 정의는 파일의 44~76줄에 위치해 있으며, `WSGITransport`는 WSGI 애플리케이션에 직접 요청을 전달하도록 구현돼 있습니다.  \n따라서 `httpx.Client(transport=WSGITransport(app))` 로 사용하면 별도의 HTTP 서버 없이 WSGI 애플리케이션을 테스트할 수 있습니다.  \n근거: httpx/_transports/wsgi.py:44-76.",
+    "cited": [
+      "httpx/_transports/wsgi.py"
+    ],
+    "file_match": true,
+    "grounded": null,
+    "steps": 2,
+    "calls": 3,
+    "tokens": 4299,
+    "stopped": "done",
+    "model": "fast"
+  }
+]

@@ -32,6 +32,8 @@ class ToolCall(BaseModel):
     id: str  # 도구 호출 번호. 결과를 돌려줄 때 같은 번호를 써야 한다 (1.5)
     name: str  # 부를 도구(함수) 이름
     arguments: str  # 인자. JSON 문자열이라 json.loads로 풀어 써야 한다
+    # Gemini 3 계열이 붙여 주는 값(thought_signature). 다음 요청에 그대로 돌려줘야 도구 호출이 이어진다 (3.6)
+    extra: dict | None = None
 
 
 class ChatResult(BaseModel):
@@ -63,6 +65,10 @@ class BadRequest(LLMError):
     """400·401·403·404·422: 요청이 잘못됨 (키 오타, 모델 이름 오타 등). 다시 해도 안 된다."""
 
 
+class RequestTooLarge(BadRequest):
+    """413: 요청 하나가 너무 큼. Groq 무료 등급은 입력+출력이 TPM 8K를 넘으면 이 오류다 (3.6).
+    줄여서 다시 보내거나 긴 컨텍스트 모델(long)로 보낸다."""
+
 class ProviderError(LLMError):
     """5xx: 공급자 서버 문제. 잠시 뒤 재시도하거나 다른 공급자로 넘긴다 (3.2)."""
 
@@ -86,6 +92,8 @@ def raise_for_status(r: httpx.Response) -> None:
         except ValueError:  # 숫자가 아닌 형식이면 모르는 것으로 둔다
             seconds = None
         raise RateLimited(seconds, r.text[:200])
+    if r.status_code == 413:  # BadRequest보다 먼저 검사한다 (3.6에서 추가)
+        raise RequestTooLarge(f"413: {r.text[:200]}")
     if r.status_code in (400, 401, 403, 404, 422):
         raise BadRequest(f"{r.status_code}: {r.text[:200]}")
     if r.status_code >= 500:
@@ -147,6 +155,7 @@ class LLMClient:
                 id=tc["id"],
                 name=tc["function"]["name"],
                 arguments=tc["function"]["arguments"],
+                extra=tc.get("extra_content"),
             )
             for tc in msg.get("tool_calls") or []
         ]

@@ -49,3 +49,38 @@
 - 수정: 없음(측정 방법의 한계로 기록)
 - 결과: "설명을 고쳐서 8→10이 됐다"는 한 번의 실행만으로는 단정할 수 없음
 - 교훈: 작은 실험은 여러 번 돌려 범위를 보고, 결과는 8/10처럼 개수와 함께 적는다. 5단계 평가에서 반복 실행으로 다룬다
+
+## [2026-11-06] 3.4 · 한국어 질문에서 벡터 검색이 정답을 못 찾음 (q04)
+- 증상: q04 "리다이렉트가 너무 많으면 어떤 예외가 나나?"의 B-벡터 상위 5개에 정답 파일(httpx/_exceptions.py, httpx/_client.py)이 하나도 없음. 유사도가 0.541~0.551로 거의 같음(1위 CHANGELOG.md)
+- 재현: `uv run python scripts\search.py "리다이렉트가 너무 많으면 어떤 예외가 나나?" httpx_B_p`
+- 원인: 질문은 한국어인데 코드와 임베딩 모델(nomic-embed-text)은 영어 위주라 질문 벡터가 코드 벡터와 잘 맞지 않음
+- 확인: 같은 뜻을 영어로 바꾸면 결과가 확 달라짐
+  - "what exception is raised when there are too many redirects" → `_exceptions.py:249` TooManyRedirects 1위(0.774), `_client.py`도 5위 안
+  - "TooManyRedirects exception max_redirects" → 1위 0.834, 정답 파일 둘이 1·2위
+- 수정: 3.4 고쳐 보기 ②(검색 전에 fast 모델로 질문을 영어 검색어로 바꿈) + ①(tests/ 결과 빼기)
+- 결과: B-하이브리드 recall@5 10/20 → 20/20 (번역 모델 long, 2026-11-06). 봉인 질문에서도 5/10 → 8/10
+- 교훈: 검색 방식을 바꾸기 전에 질문과 문서의 언어부터 맞춘다. 유사도가 다 비슷하게 낮으면(0.55 근처) "가까운 게 없다"는 신호다. 코드 이름이 질문에 들어가면 청크 헤더(`symbol:`)와 직접 맞아 더 정확해진다
+
+## [2026-11-05] 3.1 · 실험용 설정을 되돌리지 않아 가장 중요한 파일이 색인에서 빠질 뻔함
+- 증상: `chunk_stats.py`가 기대값(방식 A 505개, B 1,660개)보다 적은 A 439개, B 1,373개를 냄. 예시 출력도 `httpx/_client.py` 대신 `tests/client/test_async_client.py`가 나옴
+- 재현: 3.1 고쳐 보기에서 `ingest.py`의 `MAX_BYTES = 50_000`, `LANG`에 `.txt` 추가를 한 채로 3.2 진행
+- 원인: 50KB 상한 때문에 `httpx/_client.py`(67KB)와 `CHANGELOG.md`(54KB)가 수집에서 빠짐. 고쳐 보기 뒤 원래대로 되돌리지 않음
+- 수정: `MAX_BYTES = 1_000_000`, `LANG` 원래대로 → `repo_stats.py`가 96개 파일로 돌아온 것 확인 후 색인
+- 결과: 색인 3개 모두 96개 파일, `_client.py` 포함
+- 교훈: 실험용으로 바꾼 값은 실험이 끝나면 바로 되돌리고, 다음 단계 전에 기준 숫자(파일 수)로 확인한다. 숫자가 기대값과 다르면 앞 단계의 설정부터 의심한다
+
+## [2026-11-06] 3.1 · .gitignore에 data/를 넣기 전에 git add를 해 버림
+- 증상: `git add .` 중 `warning: adding embedded git repository: data/repos/httpx`. `git status`에 `A  data/qdrant/…`, `Am data/repos/httpx`가 보임(38MB)
+- 재현: `.gitignore`에 `data/`를 저장하기 전에 `git add .`
+- 원인: 무시 규칙이 없으니 clone한 httpx(안에 자기 `.git`이 있음)와 색인 파일이 모두 커밋 목록에 올라감. 목록에 올라간 파일은 `git check-ignore`도 무시 대상으로 보지 않음
+- 수정: `.gitignore`에 `data/` 추가 → `git rm -r --cached data`는 httpx 내부 `.git` 때문에 `staged content different` 오류로 거절 → `git restore --staged data`로 목록에서만 뺌(파일은 그대로)
+- 결과: `git check-ignore -v data/repos/httpx` → `.gitignore:13:data/`, 커밋 전이라 원격 노출 없음
+- 교훈: 큰 데이터나 다른 저장소를 받기 전에 `.gitignore`부터 넣고, `git add .` 전에 `git status`를 본다
+
+## [2026-11-06] 3.4 · 무료 한도에 연달아 걸림 (Groq 하루 한도, Gemini 분당 한도)
+- 증상: ① `eval_retrieval.py`가 `RateLimited … tokens per day (TPD): Limit 200000, Used 199703`로 멈춤 ② 번역 모델을 long(Gemini)으로 바꾸자 `429 You exceeded your current quota`
+- 재현: 같은 날 `agent_eval.py`를 react·plan·plan으로 세 번 돌린 뒤 `eval_retrieval.py` 실행
+- 원인: ① 에이전트 실험 한 번에 fast 토큰 약 6.7만~9.2만을 써서 하루 200K를 넘김 ② Gemini 무료는 분당 15회인데 질문 20개를 쉬지 않고 연달아 보냄. 메시지는 하루 한도처럼 보였지만 1분 뒤 1회 호출은 정상이었음
+- 수정: 번역 모델을 long으로 바꾸고 `to_english`에 호출마다 `await asyncio.sleep(4)` 추가. 번역 모델이 바뀌었으니 개발용 점수도 같은 모델로 다시 잼
+- 결과: 개발용 20/20, 봉인 8/10 측정 완료
+- 교훈: 하루 예산을 먼저 계산하고(docs/budget.md) 실험을 나눈다. 429는 분당·하루 중 어느 한도인지 먼저 확인한다(분당이면 기다리면 되고, 하루면 다른 공급자로)

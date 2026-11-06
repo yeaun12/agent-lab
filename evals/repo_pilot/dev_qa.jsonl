@@ -1,0 +1,20 @@
+{"id": "q01", "question": "연결 재시도(retries)는 어디서 설정하나?", "expected_files": ["httpx/_transports/default.py"], "category": "위치"}
+{"id": "q02", "question": "기본 타임아웃은 몇 초이고 어디에 정의돼 있나?", "expected_files": ["httpx/_config.py"], "category": "위치"}
+{"id": "q04", "question": "리다이렉트가 너무 많으면 어떤 예외가 나나?", "expected_files": ["httpx/_exceptions.py", "httpx/_client.py"], "category": "동작"}
+{"id": "q05", "question": "raise_for_status는 어떤 상태 코드에서 예외를 던지나?", "expected_files": ["httpx/_models.py"], "category": "동작"}
+{"id": "q06", "question": "Digest 인증은 어떻게 구현돼 있나?", "expected_files": ["httpx/_auth.py"], "category": "동작"}
+{"id": "q07", "question": "Basic 인증 헤더는 어떻게 만드나?", "expected_files": ["httpx/_auth.py"], "category": "동작"}
+{"id": "q09", "question": "연결 풀의 기본 최대 연결 수는 얼마인가?", "expected_files": ["httpx/_config.py"], "category": "위치"}
+{"id": "q10", "question": "환경 변수에서 프록시 설정을 읽는 함수는 무엇인가?", "expected_files": ["httpx/_utils.py"], "category": "위치"}
+{"id": "q12", "question": "테스트에서 실제 네트워크 없이 가짜 응답을 돌려주려면 무엇을 쓰나?", "expected_files": ["httpx/_transports/mock.py", "docs/advanced/transports.md"], "category": "문서"}
+{"id": "q13", "question": "WSGI 앱을 서버 없이 직접 호출하는 transport는 어디에 있나?", "expected_files": ["httpx/_transports/wsgi.py"], "category": "위치"}
+{"id": "q15", "question": "멀티파트 파일 업로드 본문은 어디서 만드나?", "expected_files": ["httpx/_multipart.py"], "category": "위치"}
+{"id": "q16", "question": "응답을 줄 단위로 읽는 iter_lines는 줄바꿈을 어떻게 나누나?", "expected_files": ["httpx/_decoders.py", "httpx/_models.py"], "category": "여러 파일"}
+{"id": "q18", "question": "다른 도메인으로 리다이렉트될 때 Authorization 헤더는 어떻게 처리되나?", "expected_files": ["httpx/_client.py"], "category": "동작"}
+{"id": "q19", "question": "요청 전이나 응답 후에 내 함수를 실행하는 event hooks는 어떻게 쓰나?", "expected_files": ["docs/advanced/event-hooks.md", "httpx/_client.py"], "category": "문서"}
+{"id": "q21", "question": "httpx 명령줄 도구(CLI)의 진입점은 어디인가?", "expected_files": ["httpx/_main.py"], "category": "위치"}
+{"id": "q22", "question": "헤더 이름의 대소문자는 어떻게 다루나?", "expected_files": ["httpx/_models.py"], "category": "동작"}
+{"id": "q24", "question": "AsyncClient로 비동기 요청을 보내는 방법은?", "expected_files": ["docs/async.md", "httpx/_client.py"], "category": "문서"}
+{"id": "q25", "question": "httpcore에서 난 예외를 httpx 예외로 바꾸는 곳은 어디인가?", "expected_files": ["httpx/_transports/default.py"], "category": "여러 파일"}
+{"id": "q27", "question": "netrc 파일로 인증하려면 어떻게 하나?", "expected_files": ["httpx/_auth.py", "docs/advanced/authentication.md"], "category": "문서"}
+{"id": "q29", "question": "응답 텍스트의 인코딩은 어떻게 정해지나?", "expected_files": ["httpx/_models.py", "docs/advanced/text-encodings.md"], "category": "동작"}

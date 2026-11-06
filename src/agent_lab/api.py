@@ -1,13 +1,19 @@
-"""1.2 FastAPI 기초: /health, /echo, /stream 세 엔드포인트."""
+"""2.2 FastAPI 기초(/health, /echo, /stream)와 3.7 에이전트 서비스(/ask, /code, /)."""
 
 import asyncio
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
-from fastapi.responses import StreamingResponse
+import httpx
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from agent_lab.agents.repo_pilot.agent import run_events
+from agent_lab.agents.repo_pilot.tools import RepoToolbox
+from agent_lab.core.llm import LLMClient, LLMError
 from agent_lab.core.settings import Settings, get_settings
 
 # 웹 서버 앱 하나. 실행: uv run uvicorn agent_lab.api:app --reload
@@ -67,3 +73,74 @@ async def word_stream():
 async def stream():
     # StreamingResponse: 응답을 한 번에 보내지 않고 word_stream()이 내보내는 대로 조금씩 보낸다
     return StreamingResponse(word_stream(), media_type="text/event-stream")
+
+
+
+# ---------- 3.7 /ask: 에이전트가 일하는 과정을 SSE로 흘려보낸다 ----------
+
+
+STATIC = Path(__file__).parent / "static"
+_toolbox: RepoToolbox | None = None
+
+
+def get_toolbox() -> RepoToolbox:
+    """도구 상자는 하나만 만들어 모든 요청이 같이 쓴다 (테스트에서는 가짜로 바꿔 끼운다)."""
+    global _toolbox
+    if _toolbox is None:
+        _toolbox = RepoToolbox("httpx")
+    return _toolbox
+
+
+def get_llm_factory():
+    """요청마다 새 LLM 클라이언트를 만드는 함수를 돌려준다 (테스트에서는 FakeLLM으로 바꾼다)."""
+    return LLMClient
+
+
+class AskIn(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    model: str = Field("fast", pattern="^(fast|smart|long)$")  # 아무 모델이나 못 고르게
+
+
+async def agent_stream(request: Request, body: AskIn, toolbox, llm_factory):
+    """이벤트 하나 = SSE 한 덩어리. 요청마다 messages가 따로라 동시 요청끼리 섞이지 않는다."""
+    client = llm_factory()
+    finished = False
+    try:
+        async for event in run_events(client, body.question, toolbox, model=body.model):
+            if await request.is_disconnected():  # 브라우저를 닫았으면 더 묻지 않는다 (한도 절약)
+                break
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        finished = True
+    except (LLMError, RuntimeError, httpx.HTTPError) as e:  # 실패도 이벤트로 알려 준다 (화면이 멈춘 것처럼 보이지 않게)
+        yield f"data: {json.dumps({'type': 'error', 'text': str(e)[:300]}, ensure_ascii=False)}\n\n"
+        finished = True
+    finally:
+        if not finished:
+            print(f"[ask] 연결 끊김 → 실행 취소: {body.question[:30]}")
+        if hasattr(client, "aclose"):
+            await client.aclose()
+    yield "data: [DONE]\n\n"
+
+
+@app.post("/ask")
+async def ask(
+    request: Request,
+    body: AskIn,
+    toolbox: Annotated[RepoToolbox, Depends(get_toolbox)],
+    llm_factory: Annotated[object, Depends(get_llm_factory)],
+):
+    return StreamingResponse(agent_stream(request, body, toolbox, llm_factory), media_type="text/event-stream")
+
+
+@app.get("/code")
+async def code(
+    toolbox: Annotated[RepoToolbox, Depends(get_toolbox)], path: str, start: int = 1, end: int | None = None
+):
+    """인용(path:line)을 누르면 그 부분 코드를 보여 준다. 3.5의 read_file 안전 검사를 그대로 쓴다."""
+    text, ok = toolbox.run("read_file", json.dumps({"path": path, "start_line": max(1, start - 5), "end_line": end}))
+    return {"ok": ok, "text": text}
+
+
+@app.get("/")
+async def page():
+    return FileResponse(STATIC / "ask.html")

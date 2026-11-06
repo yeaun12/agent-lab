@@ -1,0 +1,10 @@
+{"id": "q03", "question": "리다이렉트는 최대 몇 번까지 따라가나?", "expected_files": ["httpx/_config.py", "httpx/_client.py"], "category": "위치"}
+{"id": "q08", "question": "gzip이나 brotli로 압축된 응답 본문은 어디서 풀리나?", "expected_files": ["httpx/_decoders.py"], "category": "위치"}
+{"id": "q11", "question": "SSL_CERT_FILE 환경 변수는 어디서 쓰이나?", "expected_files": ["httpx/_config.py"], "category": "위치"}
+{"id": "q14", "question": "json= 인자로 보낸 데이터는 어떻게 인코딩되나?", "expected_files": ["httpx/_content.py"], "category": "동작"}
+{"id": "q17", "question": "리다이렉트할 때 POST가 GET으로 바뀌는 규칙은 무엇인가?", "expected_files": ["httpx/_client.py"], "category": "동작"}
+{"id": "q20", "question": "URL 문자열을 파싱하는 코드는 어디에 있나?", "expected_files": ["httpx/_urlparse.py"], "category": "위치"}
+{"id": "q23", "question": "NOT_FOUND 같은 HTTP 상태 코드 이름은 어디에 정의돼 있나?", "expected_files": ["httpx/_status_codes.py"], "category": "위치"}
+{"id": "q26", "question": "쿠키는 어떤 클래스로 관리하나?", "expected_files": ["httpx/_models.py"], "category": "위치"}
+{"id": "q28", "question": "connect, read, write, pool 타임아웃은 각각 무엇을 뜻하나?", "expected_files": ["httpx/_config.py", "docs/advanced/timeouts.md"], "category": "문서"}
+{"id": "q30", "question": "requests 라이브러리와 동작이 다른 점은 무엇인가?", "expected_files": ["docs/compatibility.md"], "category": "문서"}
